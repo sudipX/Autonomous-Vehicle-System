@@ -1,19 +1,7 @@
-"""
-AutoTrack - Lane Detection Module
-==================================
-Uses OpenCV with Hough Line Transform to detect lanes from the
-camera feed and generate steering commands (left, right, straight).
-
-Hardware: Raspberry Pi 4B + Webcam
-"""
-
 import cv2
 import numpy as np
 
 
-# ──────────────────────────────────────────────
-# Configuration
-# ──────────────────────────────────────────────
 CAMERA_INDEX = 0          # Change if using a different camera port
 FRAME_WIDTH  = 640
 FRAME_HEIGHT = 480
@@ -43,9 +31,6 @@ ROI_Y_MIN = 250
 ROI_Y_MAX = 600
 
 
-# ──────────────────────────────────────────────
-# Helper functions
-# ──────────────────────────────────────────────
 
 def compute_slope(x1: int, x2: int, y1: int, y2: int) -> float:
     """Return the angle (degrees) of a line segment."""
@@ -55,14 +40,7 @@ def compute_slope(x1: int, x2: int, y1: int, y2: int) -> float:
 
 
 def preprocess_frame(frame: np.ndarray) -> np.ndarray:
-    """
-    Convert a BGR frame to an edge-detected binary image.
 
-    Steps:
-      1. Grayscale conversion
-      2. Gaussian blur (noise reduction)
-      3. Canny edge detection
-    """
     gray  = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     blur  = cv2.GaussianBlur(gray, (5, 5), 0)
     edges = cv2.Canny(blur, CANNY_LOW, CANNY_HIGH)
@@ -70,10 +48,7 @@ def preprocess_frame(frame: np.ndarray) -> np.ndarray:
 
 
 def apply_roi_mask(edges: np.ndarray) -> np.ndarray:
-    """
-    Mask out regions outside the region of interest.
-    Keeps only the lower portion of the frame where lane markings appear.
-    """
+
     mask   = np.zeros_like(edges)
     height = edges.shape[0]
     width  = edges.shape[1]
@@ -91,7 +66,7 @@ def apply_roi_mask(edges: np.ndarray) -> np.ndarray:
 
 
 def detect_lines(edges: np.ndarray):
-    """Run Hough Line Transform and return detected line segments."""
+
     return cv2.HoughLinesP(
         edges,
         HOUGH_RHO,
@@ -103,15 +78,7 @@ def detect_lines(edges: np.ndarray):
 
 
 def classify_lines(lines, frame: np.ndarray):
-    """
-    Classify lines as belonging to the left or right lane
-    based on their slope angles.
-
-    Returns:
-        left_count  (int): number of left-lane line segments
-        right_count (int): number of right-lane line segments
-        annotated   (np.ndarray): frame with detected lanes drawn
-    """
+   
     left_count  = 0
     right_count = 0
     annotated   = frame.copy()
@@ -143,18 +110,7 @@ def classify_lines(lines, frame: np.ndarray):
 
 def decide_direction(left_count: int, right_count: int,
                      state: dict) -> tuple[str, dict]:
-    """
-    Stateful decision logic using lane counters.
-
-    State keys:
-        a (bool): allow left detection
-        b (bool): allow right detection
-        c (bool): allow straight detection
-
-    Returns:
-        command (str): 'left' | 'right' | 'straight' | 'none'
-        state   (dict): updated state
-    """
+   
     command = "none"
 
     if left_count >= LANE_COUNT_THRESHOLD and state["a"]:
@@ -172,19 +128,9 @@ def decide_direction(left_count: int, right_count: int,
     return command, state
 
 
-# ──────────────────────────────────────────────
-# Main loop
-# ──────────────────────────────────────────────
 
 def run(serial_connection=None, show_preview: bool = True):
-    """
-    Run the lane detection loop.
-
-    Args:
-        serial_connection: An open serial.Serial object to send commands
-                           to the Arduino. Pass None for standalone testing.
-        show_preview (bool): Display live OpenCV windows.
-    """
+   
     cap = cv2.VideoCapture(CAMERA_INDEX)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH,  FRAME_WIDTH)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT)
