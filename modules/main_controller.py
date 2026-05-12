@@ -1,24 +1,3 @@
-"""
-AutoTrack - Main Controller
-=============================
-Integrates lane detection, traffic sign detection, and serial communication
-into a single autonomous driving pipeline running on the Raspberry Pi.
-
-Run this file to start the self-driving car:
-    python main_controller.py [--no-preview] [--port /dev/ttyUSB0]
-
-Architecture:
-    ┌─────────────┐    camera    ┌──────────────────┐
-    │   Webcam    │ ──────────► │  Raspberry Pi 4B  │
-    └─────────────┘             │                   │
-                                │  lane_detection   │
-                                │  sign_detection   │──► serial ──► Arduino ──► Motors
-                                │  main_controller  │
-                                └──────────────────┘
-                                          ▲
-                                  ultrasonic data (via Arduino serial feedback)
-"""
-
 import argparse
 import sys
 import time
@@ -33,26 +12,13 @@ from lane_detection import (
 )
 
 
-# ──────────────────────────────────────────────
-# Configuration
-# ──────────────────────────────────────────────
 SIGN_DETECTION_ENABLED = True    # Disable if model weights are not yet ready
 SHOW_PREVIEW           = True
 LOOP_DELAY             = 0.01    # Seconds between main loop iterations
 
 
-# ──────────────────────────────────────────────
-# Controller
-# ──────────────────────────────────────────────
 
 class AutoTrackController:
-    """
-    Top-level controller that coordinates:
-      - Lane detection (computer vision)
-      - Traffic sign detection (YOLOv11)
-      - Serial command dispatch to Arduino
-      - Reading obstacle alerts from Arduino
-    """
 
     def __init__(self, serial_port: str, show_preview: bool = True):
         self.serial   = SerialComm(port=serial_port)
@@ -79,7 +45,7 @@ class AutoTrackController:
 
     # ------------------------------------------------------------------
     def start(self) -> None:
-        """Open serial connection and start the main loop."""
+
         self.serial.connect()
 
         # Background thread to read Arduino feedback (obstacle alerts)
@@ -109,7 +75,7 @@ class AutoTrackController:
 
     # ------------------------------------------------------------------
     def stop(self) -> None:
-        """Gracefully stop the controller and close serial."""
+
         self._running = False
         self.serial.send("stop")
         self.serial.disconnect()
@@ -117,14 +83,13 @@ class AutoTrackController:
 
     # ------------------------------------------------------------------
     def _loop(self, cap) -> None:
-        """Main perception-action loop."""
         while self._running:
             ret, frame = cap.read()
             if not ret:
                 print("[Controller] Frame read failed.")
                 break
 
-            # ── 1. Obstacle check (from Arduino ultrasonic feedback) ──
+            # Obstacle check (from Arduino ultrasonic feedback)
             with self._obstacle_lock:
                 obstacle = self._obstacle_detected
 
@@ -135,7 +100,7 @@ class AutoTrackController:
                 time.sleep(LOOP_DELAY)
                 continue
 
-            # ── 2. Traffic sign detection ──────────────────────────────
+            # Traffic sign detection 
             sign_cmd = None
             if self._sign_detector is not None:
                 detections = self._sign_detector.detect(frame)
@@ -154,7 +119,7 @@ class AutoTrackController:
             if sign_cmd:
                 self._dispatch(sign_cmd)
 
-            # ── 3. Lane detection ──────────────────────────────────────
+            # Lane detection 
             edges                        = preprocess_frame(frame)
             masked                       = apply_roi_mask(edges)
             lines                        = detect_lines(masked)
@@ -164,7 +129,7 @@ class AutoTrackController:
             if lane_cmd != "none":
                 self._dispatch(lane_cmd)
 
-            # ── 4. Preview ─────────────────────────────────────────────
+            # Preview 
             if self.preview:
                 label = sign_cmd.upper() if sign_cmd else lane_cmd.upper()
                 self._show(annotated_frame, label)
@@ -175,19 +140,14 @@ class AutoTrackController:
 
             time.sleep(LOOP_DELAY)
 
-    # ------------------------------------------------------------------
+
     def _dispatch(self, command: str) -> None:
-        """Send a command only when it differs from the last command sent."""
         if command != self._last_cmd:
             self.serial.send(command)
             self._last_cmd = command
 
-    # ------------------------------------------------------------------
+
     def _read_arduino(self) -> None:
-        """
-        Background thread: continuously read lines from the Arduino.
-        Sets _obstacle_detected flag when an obstacle alert is received.
-        """
         while self._running:
             line = self.serial.read_line()
             if line:
@@ -196,7 +156,6 @@ class AutoTrackController:
                     self._obstacle_detected = "obstacle detected" in line.lower()
             time.sleep(0.05)
 
-    # ------------------------------------------------------------------
     @staticmethod
     def _show(frame, label: str) -> None:
         cv2.putText(
@@ -208,20 +167,17 @@ class AutoTrackController:
         cv2.imshow("AutoTrack", frame)
 
 
-# ──────────────────────────────────────────────
-# Entry point
-# ──────────────────────────────────────────────
 
 def parse_args():
     parser = argparse.ArgumentParser(description="AutoTrack — Self-Driving Car Controller")
     parser.add_argument(
-        "--port",
+        "port",
         type=str,
         default=None,
         help="Serial port for Arduino (e.g. /dev/ttyUSB0). Auto-detected if omitted.",
     )
     parser.add_argument(
-        "--no-preview",
+        "no-preview",
         action="store_true",
         help="Disable OpenCV preview windows (useful for headless operation).",
     )
