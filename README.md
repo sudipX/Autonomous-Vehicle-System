@@ -1,4 +1,4 @@
-# AutoTrack — Autonomous Self-Driving Car System
+# AutoTrack : Autonomous Self-Driving Car System
 
 AutoTrack is a Raspberry Pi-based autonomous vehicle that uses computer vision and machine learning to navigate in real time. It detects lane markings, reads traffic signs, and avoids obstacles — all processed on a Raspberry Pi 4B and executed through an Arduino-controlled motor system.
 
