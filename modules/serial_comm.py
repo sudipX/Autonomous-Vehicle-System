@@ -1,13 +1,3 @@
-"""
-AutoTrack - Serial Communication Module
-=========================================
-Manages UART (serial) communication between the Raspberry Pi and the
-Arduino microcontroller. Provides a clean interface for sending movement
-commands and reading sensor acknowledgements.
-
-Hardware: Raspberry Pi 4B <--> Arduino Uno via USB / UART
-"""
-
 import time
 import threading
 from typing import Optional
@@ -21,18 +11,12 @@ except ImportError:
     print("[SerialComm] WARNING: pyserial not installed. Run: pip install pyserial")
 
 
-# ──────────────────────────────────────────────
-# Configuration
-# ──────────────────────────────────────────────
 DEFAULT_PORT     = "/dev/ttyUSB0"   # Adjust: ttyUSB0 or ttyACM0 on RPi
 DEFAULT_BAUDRATE = 9600
 READ_TIMEOUT     = 1.0              # seconds
 WRITE_DELAY      = 0.05            # seconds between consecutive writes
 
 
-# ──────────────────────────────────────────────
-# Command constants (must match Arduino sketch)
-# ──────────────────────────────────────────────
 CMD_LEFT      = "left"
 CMD_RIGHT     = "right"
 CMD_STRAIGHT  = "straight"
@@ -43,20 +27,8 @@ CMD_SPEED_70  = "speed_70"
 VALID_COMMANDS = {CMD_LEFT, CMD_RIGHT, CMD_STRAIGHT, CMD_STOP, CMD_SPEED_40, CMD_SPEED_70}
 
 
-# ──────────────────────────────────────────────
-# Serial manager
-# ──────────────────────────────────────────────
 
 class SerialComm:
-    """
-    Thread-safe wrapper around pyserial for Raspberry Pi ↔ Arduino UART.
-
-    Usage:
-        comm = SerialComm()
-        comm.connect()
-        comm.send("left")
-        comm.disconnect()
-    """
 
     def __init__(self, port: str = DEFAULT_PORT, baudrate: int = DEFAULT_BAUDRATE):
         self.port      = port
@@ -65,14 +37,9 @@ class SerialComm:
         self._lock     = threading.Lock()
         self._last_send_time = 0.0
 
-    # ------------------------------------------------------------------
+    
     def connect(self) -> bool:
-        """
-        Open the serial connection to the Arduino.
-
-        Returns:
-            True if connected successfully, False otherwise.
-        """
+ 
         if not SERIAL_AVAILABLE:
             print("[SerialComm] pyserial missing — running in mock mode.")
             return False
@@ -91,25 +58,16 @@ class SerialComm:
             self._serial = None
             return False
 
-    # ------------------------------------------------------------------
+    
     def disconnect(self) -> None:
-        """Close the serial connection."""
         with self._lock:
             if self._serial and self._serial.is_open:
                 self._serial.close()
                 print("[SerialComm] Connection closed.")
 
-    # ------------------------------------------------------------------
+
     def send(self, command: str) -> bool:
-        """
-        Send a movement command to the Arduino.
 
-        Args:
-            command (str): One of VALID_COMMANDS.
-
-        Returns:
-            True if the command was sent successfully.
-        """
         if command not in VALID_COMMANDS:
             print(f"[SerialComm] Unknown command '{command}'. Ignored.")
             return False
@@ -135,14 +93,9 @@ class SerialComm:
                 print(f"[SerialComm] Write error: {exc}")
                 return False
 
-    # ------------------------------------------------------------------
-    def read_line(self) -> Optional[str]:
-        """
-        Read a single line from the Arduino (non-blocking with timeout).
 
-        Returns:
-            Decoded string or None if nothing received.
-        """
+    def read_line(self) -> Optional[str]:
+
         with self._lock:
             if self._serial is None or not self._serial.is_open:
                 return None
@@ -153,12 +106,12 @@ class SerialComm:
                 print(f"[SerialComm] Read error: {exc}")
         return None
 
-    # ------------------------------------------------------------------
+
     @property
     def is_connected(self) -> bool:
         return self._serial is not None and self._serial.is_open
 
-    # ------------------------------------------------------------------
+
     def __enter__(self):
         self.connect()
         return self
@@ -167,15 +120,8 @@ class SerialComm:
         self.disconnect()
 
 
-# ──────────────────────────────────────────────
-# Utility: auto-detect Arduino port
-# ──────────────────────────────────────────────
-
 def find_arduino_port() -> Optional[str]:
-    """
-    Scan available serial ports and return the first that looks like
-    an Arduino (USB-serial bridge).
-    """
+
     if not SERIAL_AVAILABLE:
         return None
 
@@ -189,9 +135,6 @@ def find_arduino_port() -> Optional[str]:
     return None
 
 
-# ──────────────────────────────────────────────
-# Quick test
-# ──────────────────────────────────────────────
 
 if __name__ == "__main__":
     port = find_arduino_port() or DEFAULT_PORT
