@@ -1,20 +1,8 @@
-"""
-AutoTrack - Traffic Sign Detection Module
-==========================================
-Uses a fine-tuned YOLOv11 model to detect and classify traffic signs
-(Stop, Speed Limit 40, Speed Limit 70, etc.) from the camera feed.
-
-Hardware: Raspberry Pi 4B + Webcam
-Dependencies: ultralytics, opencv-python
-"""
-
 import cv2
 import time
 from pathlib import Path
 
-# ──────────────────────────────────────────────
-# Configuration
-# ──────────────────────────────────────────────
+
 MODEL_PATH      = "models/yolov11_traffic_signs.pt"   # Path to fine-tuned weights
 CAMERA_INDEX    = 0
 FRAME_WIDTH     = 640
@@ -22,7 +10,6 @@ FRAME_HEIGHT    = 480
 CONFIDENCE_MIN  = 0.40          # Minimum detection confidence
 STOP_HOLD_TIME  = 2.0           # Seconds to hold stop before resuming
 
-# Map model class indices → human-readable labels & actions
 CLASS_ACTIONS = {
     "stop":           "STOP",
     "speed limit 40": "SPEED_40",
@@ -31,15 +18,7 @@ CLASS_ACTIONS = {
 }
 
 
-# ──────────────────────────────────────────────
-# Sign detector
-# ──────────────────────────────────────────────
-
 class TrafficSignDetector:
-    """
-    Wraps a YOLOv11 model for real-time traffic sign detection.
-    Emits action commands that can be consumed by the main controller.
-    """
 
     def __init__(self, model_path: str = MODEL_PATH):
         try:
@@ -56,19 +35,9 @@ class TrafficSignDetector:
         self._stop_triggered_at: float = 0.0
         self._current_speed_limit: int = 70   # default
 
-    # ------------------------------------------------------------------
+    
     def detect(self, frame) -> list[dict]:
-        """
-        Run inference on a single BGR frame.
 
-        Returns a list of detections, each a dict:
-            {
-                "label":      str,   # class name
-                "confidence": float, # 0–1
-                "box":        (x1, y1, x2, y2),
-                "action":     str,   # mapped action string
-            }
-        """
         results     = self.model(frame, verbose=False)
         detections  = []
 
@@ -92,12 +61,9 @@ class TrafficSignDetector:
 
         return detections
 
-    # ------------------------------------------------------------------
+    
     def process_action(self, action: str, serial_connection=None) -> None:
-        """
-        React to a detected sign action.
-        Sends the appropriate command to the Arduino via serial if provided.
-        """
+
         now = time.time()
 
         if action == "STOP":
@@ -116,7 +82,7 @@ class TrafficSignDetector:
             self._current_speed_limit = 70
             self._send(serial_connection, "speed_70")
 
-    # ------------------------------------------------------------------
+
     @staticmethod
     def _send(serial_connection, message: str) -> None:
         if serial_connection is not None:
@@ -125,7 +91,7 @@ class TrafficSignDetector:
             except Exception as exc:
                 print(f"[SignDetector] Serial write error: {exc}")
 
-    # ------------------------------------------------------------------
+
     @staticmethod
     def annotate(frame, detections: list[dict]):
         """Draw bounding boxes and labels on the frame in-place."""
@@ -142,22 +108,12 @@ class TrafficSignDetector:
         return frame
 
 
-# ──────────────────────────────────────────────
-# Standalone run
-# ──────────────────────────────────────────────
 
 def run(serial_connection=None, show_preview: bool = True):
-    """
-    Run the traffic sign detection loop.
 
-    Args:
-        serial_connection: An open serial.Serial object.
-        show_preview (bool): Display live OpenCV window.
-    """
     if not Path(MODEL_PATH).exists():
         print(
             f"[SignDetector] WARNING: model not found at '{MODEL_PATH}'.\n"
-            "Place your fine-tuned YOLOv11 weights there before running."
         )
         return
 
