@@ -70,10 +70,10 @@ The Arduino sends back plain-text lines. Any line containing `"obstacle detected
 
 ```
 autotrack/
-├── main_controller.py
-├── lane_detection.py
-├── sign_detection.py
-├── serial_comm.py
-└── models/
-    └── yolov11_traffic_signs.pt
+├── modules
+    ├── main_controller.py
+    ├── lane_detection.py
+    ├── sign_detection.py
+    ├── serial_comm.py
+├── report.pdf
 ```
