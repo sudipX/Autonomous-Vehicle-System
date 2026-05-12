@@ -43,7 +43,7 @@ class AutoTrackController:
         self._obstacle_detected = False
         self._obstacle_lock     = threading.Lock()
 
-    # ------------------------------------------------------------------
+    
     def start(self) -> None:
 
         self.serial.connect()
@@ -73,7 +73,7 @@ class AutoTrackController:
             cv2.destroyAllWindows()
             self.stop()
 
-    # ------------------------------------------------------------------
+    
     def stop(self) -> None:
 
         self._running = False
@@ -81,7 +81,7 @@ class AutoTrackController:
         self.serial.disconnect()
         print("[Controller] AutoTrack stopped.")
 
-    # ------------------------------------------------------------------
+    
     def _loop(self, cap) -> None:
         while self._running:
             ret, frame = cap.read()
